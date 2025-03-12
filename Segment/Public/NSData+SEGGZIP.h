@@ -1,0 +1,1 @@
+../Internal/NSData+SEGGZIP.h

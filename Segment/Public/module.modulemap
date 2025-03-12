@@ -1,0 +1,4 @@
+module Segment {
+    umbrella "."  // All headers in Public (which are symlinks to both directories) are included
+    export *
+}
