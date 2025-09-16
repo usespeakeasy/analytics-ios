@@ -6,7 +6,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 
 NS_SWIFT_NAME(StoreKitTracker)
-@interface SEGStoreKitTracker : NSObject <SKPaymentTransactionObserver, SKProductsRequestDelegate>
+@interface SEGStoreKitTracker : NSObject
 
 + (instancetype)trackTransactionsForAnalytics:(SEGAnalytics *)analytics;
 
