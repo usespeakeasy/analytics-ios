@@ -469,12 +469,12 @@ NSString *const kSEGCachedSettingsFilename = @"analytics.settings.v2.plist";
 
 - (void)refreshSettings
 {
-    // look at our cache immediately, lets try to get things running
-    // with the last values while we wait to see about any updates.
     NSDictionary *previouslyCachedSettings = [self cachedSettings];
     if (previouslyCachedSettings && [previouslyCachedSettings count] > 0) {
         [self setCachedSettings:previouslyCachedSettings];
         [self configureEdgeFunctions:previouslyCachedSettings];
+    } else {
+        [self setCachedSettings:[self defaultSettings]];
     }
     
     seg_dispatch_specific_async(_serialQueue, ^{
