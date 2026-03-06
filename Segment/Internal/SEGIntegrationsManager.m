@@ -74,6 +74,7 @@ NSString *const kSEGCachedSettingsFilename = @"analytics.settings.v2.plist";
 @property (nonatomic, strong) NSMutableDictionary *registeredIntegrations;
 @property (nonatomic, strong) NSMutableDictionary *integrationMiddleware;
 @property (nonatomic) volatile BOOL initialized;
+@property (nonatomic) BOOL initializedWithDefaultSettingsOnly;
 @property (nonatomic, copy) NSString *cachedAnonymousId;
 @property (nonatomic, strong) SEGHTTPClient *httpClient;
 @property (nonatomic, strong) NSURLSessionDataTask *settingsRequest;
@@ -405,11 +406,14 @@ NSString *const kSEGCachedSettingsFilename = @"analytics.settings.v2.plist";
     }
     
     seg_dispatch_specific_sync(_serialQueue, ^{
-        if (self.initialized) {
+        if (self.initialized && !self.initializedWithDefaultSettingsOnly) {
             return;
         }
         for (id<SEGIntegrationFactory> factory in self.factories) {
             NSString *key = [factory key];
+            if (self.initializedWithDefaultSettingsOnly && self.integrations[key]) {
+                continue;
+            }
             NSDictionary *integrationSettings = [projectSettings objectForKey:key];
             if (isUnitTesting()) {
                 integrationSettings = @{};
@@ -431,6 +435,7 @@ NSString *const kSEGCachedSettingsFilename = @"analytics.settings.v2.plist";
         }
         [self flushMessageQueue];
         self.initialized = true;
+        self.initializedWithDefaultSettingsOnly = NO;
     });
 }
 
@@ -474,7 +479,15 @@ NSString *const kSEGCachedSettingsFilename = @"analytics.settings.v2.plist";
         [self setCachedSettings:previouslyCachedSettings];
         [self configureEdgeFunctions:previouslyCachedSettings];
     } else {
-        [self setCachedSettings:[self defaultSettings]];
+        NSDictionary *defaults = self.configuration.defaultSettings ?: [self defaultSettings];
+        NSMutableDictionary *settingsToApply = [defaults mutableCopy];
+        NSMutableDictionary *integrations = [settingsToApply[@"integrations"] mutableCopy] ?: [NSMutableDictionary dictionary];
+        if (!integrations[kSEGSegmentDestinationName]) {
+            integrations[kSEGSegmentDestinationName] = [self segmentSettings];
+        }
+        settingsToApply[@"integrations"] = integrations;
+        [self updateIntegrationsWithSettings:settingsToApply[@"integrations"]];
+        self.initializedWithDefaultSettingsOnly = YES;
     }
     
     seg_dispatch_specific_async(_serialQueue, ^{
